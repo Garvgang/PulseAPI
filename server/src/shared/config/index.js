@@ -5,7 +5,7 @@ dotenv.config();
 const config = {
   // Server
   node_env: process.env.NODE_ENV || "development",
-  port: parseInt(process.env.PORT || "5000", 10),
+  port: parseInt(process.env.PORT || "5000", 10), // 10 is for decimal
 
   // MongoDB
   mongo: {
@@ -34,15 +34,15 @@ const config = {
       process.env.RABBITMQ_QUEUE || "api_hits",
 
     publisherConfirms:
-      process.env.RABBITMQ_PUBLISHER_CONFIRMS === "true",
+      process.env.RABBITMQ_PUBLISHER_CONFIRMS === "true" || "false", // this means your message is received 
 
     retryAttempts: parseInt(
-      process.env.RABBITMQ_RETRY_ATTEMPTS || "3",
+      process.env.RABBITMQ_RETRY_ATTEMPTS || "3", // it will try 3 times
       10
     ),
 
     retryDelay: parseInt(
-      process.env.RABBITMQ_RETRY_DELAY || "1000",
+      process.env.RABBITMQ_RETRY_DELAY || "1000",  // try after 1 sec 
       10
     ),
   },
@@ -56,12 +56,12 @@ const config = {
   // Rate Limit
   rateLimit: {
     windowMs: parseInt(
-      process.env.RATE_LIMIT_WINDOW_MS || "900000",
+      process.env.RATE_LIMIT_WINDOW_MS || "900000", // 15min
       10
     ),
 
     maxRequests: parseInt(
-      process.env.RATE_LIMIT_MAX_REQUESTS || "1000",
+      process.env.RATE_LIMIT_MAX_REQUESTS || "1000", // 1000 req per 15 min per IP
       10
     ),
   },

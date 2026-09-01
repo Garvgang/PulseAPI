@@ -2,6 +2,7 @@ import winston from 'winston';
 import config from './index';
 
 const logger=winston.createLogger({
+
     level: config.node_env==='production'?"info":"debug",
     
     format: winston.format.combine(
