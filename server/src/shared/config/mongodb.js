@@ -19,6 +19,8 @@ class MongoConnection{
                 dbName:config.mongo.dbName
             })
             
+            this.connection=mongoose.connection;
+
             logger.info(`MongoDB connected: ${config.mongo.uri}`);
 
             this.connection.on("error",err=>{
