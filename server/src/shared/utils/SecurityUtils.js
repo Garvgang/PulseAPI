@@ -52,7 +52,7 @@ class SecurityUtils {
 
         // Check for common weak passwords
         const weakPasswords = [
-            'password', '123456', 'qwerty', 'admin', 'letmein',
+            'password', '123456', '654321', 'qwerty', 'admin', 'letmein',
             'password123', 'admin123', '12345678', 'welcome'
         ];
 
