@@ -33,7 +33,7 @@ app.use((req,res,next)=>{
 
 // Health Check endpoint
 app.get('/health',(req,res)=>{
-    res.status(200).json({
+    res.status(200).json(
         ResponseFormatter.success(
             {
                 status:'healthy',
@@ -42,11 +42,11 @@ app.get('/health',(req,res)=>{
             },
             'Service is healthy'
         )
-    })
+    )
 });
 
 app.use('/',(req,res)=>{
-    res.status(200).json({
+    res.status(200).json(
         ResponseFormatter.success(
             {
                 service:'PulseAPI',
@@ -60,7 +60,7 @@ app.use('/',(req,res)=>{
             },
             'PulseAPI'
         )
-    })
+    )
 });
 
 // If user request on an endpoint that doesn't exist : 404 handler
