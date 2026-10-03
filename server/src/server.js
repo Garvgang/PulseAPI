@@ -10,6 +10,9 @@ import errorHandler from './shared/middlewares/errorHandler.js';
 import ResponseFormatter from './shared/utils/responseFormatter.js';
 import cookieParser from "cookie-parser";
 
+// Routers
+import authRouter from './services/auth/routes/authRouter.js';
+
 const app=express();
 
 // Middlewares
@@ -21,7 +24,7 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
-app.use(errorHandler);
+
 
 app.use((req,res,next)=>{
     logger.info(`${req.method} ${req.path}`,{
@@ -45,7 +48,7 @@ app.get('/health',(req,res)=>{
     )
 });
 
-app.use('/',(req,res)=>{
+app.get('/',(req,res)=>{
     res.status(200).json(
         ResponseFormatter.success(
             {
@@ -63,10 +66,15 @@ app.use('/',(req,res)=>{
     )
 });
 
+// api/auth/onboard-super-admin
+app.use("/api/auth",authRouter);
+
 // If user request on an endpoint that doesn't exist : 404 handler
 app.use((req,res)=>{
     res.status(404).json(ResponseFormatter.error("endpoint not found",404))
 });
+
+app.use(errorHandler);
 
 async function initializeConnection() {
     try{
@@ -114,8 +122,9 @@ async function startServer() {
                 process.exit(1);
             },10000)
         }
-
-        process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+        // Signal termination and iteruption is an event that express can 
+        // catch if it want to terminate the system
+        process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));  
         process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
         // Handle uncaught exceptions

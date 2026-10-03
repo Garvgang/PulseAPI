@@ -1,6 +1,6 @@
 import ampq from "ampqlib";
-import config from './index';
-import logger from './logger';
+import config from './index.js';
+import logger from './logger.js';
 
 class RabbitMQConnection{
     constructor(){
