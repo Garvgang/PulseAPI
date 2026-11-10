@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
-const apiHitSchema = new mongoose.Schema({
+/**
+ * MongoDB schema for raw API hit events
+ * Stores every individual API call
+ */
+const apiHitSchema = new mongoose.Schema(
+    {
         eventId: {
             type: String,
             required: true,
@@ -62,12 +67,11 @@ const apiHitSchema = new mongoose.Schema({
     }
 );
 
-// Create compound indexes for common queries and order matters in which the way they are written
+// Create compound indexes for common queries
 apiHitSchema.index({ clientId: 1, serviceName: 1, endpoint: 1, timestamp: -1 });
 apiHitSchema.index({ clientId: 1, timestamp: -1, statusCode: 1 });
 apiHitSchema.index({ apiKeyId: 1, timestamp: -1 });
-// automatically delete API hit records approximately 30 days after their timestamp.
-apiHitSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 }); //30 days
+apiHitSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 });
 
 const ApiHit = mongoose.model('ApiHit', apiHitSchema);
 

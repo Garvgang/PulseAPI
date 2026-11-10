@@ -96,17 +96,17 @@ const userSchema = new mongoose.Schema({
     collection: "users"
 })
 
-// Hash password before saving , this is middleware
+// Hash password before saving
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         return next();
     }
+
     try {
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
         next();
-    } 
-    catch (error) {
+    } catch (error) {
         next(error);
     }
 });
@@ -116,4 +116,4 @@ userSchema.index({ clientId: 1, isActive: 1 });
 userSchema.index({ role: 1 })
 
 const User = mongoose.model("User", userSchema)
-export default User
+export default User;

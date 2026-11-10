@@ -3,6 +3,7 @@
  * This class can be extended in the future to include additional response types or features as needed.
  */
 class ResponseFormatter {
+
     /**
      * Formats a successful response with optional data and message.
      * @param {any} data - The data to include in the response (default: null)

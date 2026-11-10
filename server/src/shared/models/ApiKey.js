@@ -75,7 +75,7 @@ const apiKeySchema = new mongoose.Schema(
                 type: String,
                 validate: {
                     validator: function (v) {
-                        return /^https?:\/\/[^\s]+$ /.test(v) || v === '*';
+                        return /^https?:\/\/[^\s]+$/.test(v) || v === '*';
                     },
                     message: 'Invalid origin format'
                 }
