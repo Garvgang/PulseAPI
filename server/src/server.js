@@ -8,140 +8,181 @@ import postgres from './shared/config/postgres.js';
 import rabbitmq from './shared/config/rabbitmq.js';
 import errorHandler from './shared/middlewares/errorHandler.js';
 import ResponseFormatter from './shared/utils/responseFormatter.js';
-import cookieParser from "cookie-parser";
+import cookieParser from "cookie-parser"
 
 // Routers
-import authRouter from './services/auth/routes/authRouter.js';
+import authRouter from "./services/auth/routes/authRouter.js";
+import clientRouter from './services/client/routes/clientRoutes.js';
+import ingestRouter from "./services/ingest/routes/ingestRoutes.js"
+import analyticsRouter from "./services/analytics/routes/analyticsRoutes.js"
 
-const app=express();
+/**
+ * Initialize Express app
+ */
+const app = express();
 
-// Middlewares
+/**
+ * Middlewares
+ */
 app.use(helmet());
 app.use(cors({
     origin: true,
     credentials: true
 }));
-app.use(cookieParser());
+app.use(cookieParser())
 app.use(express.json());
-app.use(express.urlencoded({extended:true}));
+app.use(express.urlencoded({ extended: true }));
 
-
-app.use((req,res,next)=>{
-    logger.info(`${req.method} ${req.path}`,{
-        ip:req.ip,
-        userAgent:req.headers['user-agent']
-    })
+/**
+ * Request logging middleware
+ * Logs the HTTP method, path, IP address, and user agent for each incoming request.
+ */
+app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.path}`, {
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+    });
     next()
-});
+})
 
-// Health Check endpoint
-app.get('/health',(req,res)=>{
+/**
+ * Health check endpoint
+ */
+app.get('/health', (req, res) => {
     res.status(200).json(
         ResponseFormatter.success(
             {
-                status:'healthy',
+                status: 'healthy',
                 timestamp: new Date().toISOString(),
-                uptime:process.uptime(),
+                uptime: process.uptime(),
             },
             'Service is healthy'
         )
-    )
+    );
 });
 
-app.get('/',(req,res)=>{
+/**
+ * Root endpoint
+ * Provides basic information about the API service and available endpoints.
+ */
+app.get("/", (req, res) => {
     res.status(200).json(
         ResponseFormatter.success(
             {
-                service:'PulseAPI',
-                version:'1.0.0',
-                endpoints:{
-                    health:'/health',
-                    auth:'/api/auth',
-                    ingest:'/api/hit',
-                    analytics:'/api/analytics',
-                }
+                service: 'API Hit Monitoring System',
+                version: '1.0.0',
+                endpoints: {
+                    health: '/health',
+                    auth: '/api/auth',
+                    ingest: '/api/hit',
+                    analytics: '/api/analytics',
+                },
             },
-            'PulseAPI'
+            'API Hit Monitoring Service'
         )
     )
 });
 
-// api/auth/onboard-super-admin
-app.use("/api/auth",authRouter);
+/**
+ * API Routes
+ */
+app.use("/api/auth", authRouter);
+app.use("/api/hit", ingestRouter);
+app.use("/api/analytics", analyticsRouter)
+app.use("/api", clientRouter)
 
-// If user request on an endpoint that doesn't exist : 404 handler
-app.use((req,res)=>{
-    res.status(404).json(ResponseFormatter.error("endpoint not found",404))
-});
+/**
+ * 404 Handler
+ */
+app.use((req, res) => {
+    res.status(404).json(ResponseFormatter.error("Endpoint not found", 404))
+})
 
-app.use(errorHandler);
+app.use(errorHandler)
 
+/**
+ * Initialize database connections and start the server
+ */
 async function initializeConnection() {
-    try{
-        logger.info("Initiaizing database connections...");
+    try {
+        logger.info("Initializing database connections...");
+
+        // Connect to MongoDB;
         await mongodb.connect();
+
+        // Connect to PG;
         await postgres.testConnection();
+
+        // Connect to RabbitMQ;
         await rabbitmq.connect();
-        logger.info("All connection established successfully");
-    }
-    catch(error){
-        logger.error("Failed to initialize connections:",error);
+
+        logger.info("All connections established successfully");
+    } catch (error) {
+        logger.error("Failed to initialize connections:", error);
         throw error;
     }
 }
 
+/**
+ * Start the Express server after establishing database connections.
+ * Also sets up graceful shutdown handlers for SIGINT and SIGTERM signals.
+ * On shutdown, it closes the HTTP server and all database connections before exiting the process.
+ * If any error occurs during startup or shutdown, it logs the error and exits with a non-zero status code.
+ */
 async function startServer() {
-    try{
+    try {
         await initializeConnection();
-        const server=app.listen(config.port,()=>{
-            logger.info(`Server started on port :${config.port}`);
-            logger.info(`Environment : ${config.node_env}`);
-            logger.info(`API available at:http://localhost:${config.port}`);
+
+        const server = app.listen(config.port, () => {
+            logger.info(`Server started on port ${config.port}`);
+            logger.info(`Environment: ${config.node_env}`);
+            logger.info(`API available at: http://localhost:${config.port}`);
         });
 
-        const gracefulShutdown=async (signal)=>{
-            logger.info(`${signal} recieved ,shutting down gracefully...`);
-            server.close(async()=>{
+
+        const gracefulShutdown = async (signal) => {
+            logger.info(`${signal} received, shutting down gracefully...`);
+
+            server.close(async () => {
                 logger.info("HTTP server closed");
 
-                try{
+                try {
                     await mongodb.disconnect();
                     await postgres.close();
                     await rabbitmq.close();
-                    logger.info('All connections closed,existing process');
+                    logger.info('All connections closed, exiting process');
                     process.exit(0);
-                }
-                catch(error){
-                    logger.error('Error during shutdown:',error);
+                } catch (error) {
+                    logger.error('Error during shutdown:', error);
                     process.exit(1);
                 }
             })
 
-            setTimeout(()=>{
-                logger.error("Forced shutdown");
+            setTimeout(() => {
+                logger.error("Forced shutdown")
                 process.exit(1);
-            },10000)
+            }, 10000);
+
         }
-        // Signal termination and iteruption is an event that express can 
-        // catch if it want to terminate the system
-        process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));  
+
+        process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
         process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
         // Handle uncaught exceptions
-        process.on('uncaughtException',(error)=>{
-            logger.error('Uncaught Exception:',error);
+        process.on('uncaughtException', (error) => {
+            logger.error('Uncaught Exception:', error);
             gracefulShutdown('uncaughtException');
-        })
-        process.on('unhandledRejection',(reason,promise)=>{
-            logger.error('Uncaught Rejection at :',promise,' reason:',reason);
-            gracefulShutdown('unhandledRejection');
-        })  
+        });
 
-    }
-    catch(error){
-        logger.error("Failed to initialize connections:",error);
+        process.on('unhandledRejection', (reason, promise) => {
+            logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+            gracefulShutdown('unhandledRejection');
+        });
+
+    } catch (error) {
+        logger.error('Failed to start server:', error);
         process.exit(1);
     }
 }
 
-startServer();
+startServer()
