@@ -132,6 +132,18 @@ In a separate terminal:
 node src/services/processor/consumer.js
 ```
 
+### 5. Start the Frontend Dashboard
+
+In a separate terminal:
+
+```bash
+cd ../dashboard
+npm install
+npm run dev
+```
+
+The dashboard will be available at `http://localhost:5173`.
+
 ---
 
 ## API Endpoints
