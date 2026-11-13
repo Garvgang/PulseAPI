@@ -1,0 +1,62 @@
+services:
+  # PulseAPI - Express Backend API Web Service
+  - type: web
+    name: pulseapi-backend
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: pulseapi
+      - key: DATABASE_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: RABBITMQ_QUEUE
+        value: api_hits
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+
+  # PulseAPI - Event Consumer Background Worker
+  - type: worker
+    name: pulseapi-consumer
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node src/services/processor/consumer.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        fromService:
+          type: web
+          name: pulseapi-backend
+          envVarKey: MONGO_URI
+      - key: MONGO_DB_NAME
+        value: pulseapi
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: pulseapi-backend
+          envVarKey: DATABASE_URL
+      - key: RABBITMQ_URL
+        fromService:
+          type: web
+          name: pulseapi-backend
+          envVarKey: RABBITMQ_URL
+      - key: RABBITMQ_QUEUE
+        value: api_hits
