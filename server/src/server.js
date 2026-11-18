@@ -104,23 +104,39 @@ app.use(errorHandler)
  * Initialize database connections and start the server
  */
 async function initializeConnection() {
+    logger.info("Initializing database connections...");
+
+    // 1. MongoDB
     try {
-        logger.info("Initializing database connections...");
-
-        // Connect to MongoDB;
+        logger.info("Connecting to MongoDB...");
         await mongodb.connect();
-
-        // Connect to PG;
-        await postgres.testConnection();
-
-        // Connect to RabbitMQ;
-        await rabbitmq.connect();
-
-        logger.info("All connections established successfully");
+        logger.info("MongoDB connected successfully");
     } catch (error) {
-        logger.error("Failed to initialize connections:", error);
+        logger.error("Failed to connect to MongoDB:", error);
         throw error;
     }
+
+    // 2. PostgreSQL
+    try {
+        logger.info("Connecting to PostgreSQL...");
+        await postgres.testConnection();
+        logger.info("PostgreSQL connected successfully");
+    } catch (error) {
+        logger.error("Failed to connect to PostgreSQL:", error);
+        throw error;
+    }
+
+    // 3. RabbitMQ
+    try {
+        logger.info("Connecting to RabbitMQ...");
+        await rabbitmq.connect();
+        logger.info("RabbitMQ connected successfully");
+    } catch (error) {
+        logger.error("Failed to connect to RabbitMQ:", error);
+        throw error;
+    }
+
+    logger.info("All connections established successfully");
 }
 
 /**
@@ -134,7 +150,7 @@ async function startServer() {
         await initializeConnection();
 
         const server = app.listen(config.port, () => {
-            logger.info(`Server started on port ${config.port}`);
+            logger.info(`HTTP server successfully listening on port ${config.port}`);
             logger.info(`Environment: ${config.node_env}`);
             logger.info(`API available at: http://localhost:${config.port}`);
         });
