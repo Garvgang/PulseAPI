@@ -1,3 +1,5 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { z } from 'zod';
 import rabbitmq from '../../shared/config/rabbitmq.js';
 import mongodb from '../../shared/config/mongodb.js';
@@ -350,28 +352,35 @@ async function startConsumerWithRetry() {
     }
 }
 
-process.on('SIGINT', async () => {
-    logger.info('Received SIGINT, shutting down gracefully...');
-    await consumer.stop();
-    process.exit(0);
-});
+const isDirectRun = Boolean(
+    process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+);
 
-process.on('SIGTERM', async () => {
-    logger.info('Received SIGTERM, shutting down gracefully...');
-    await consumer.stop();
-    process.exit(0);
-});
+if (isDirectRun) {
+    process.on('SIGINT', async () => {
+        logger.info('Received SIGINT, shutting down gracefully...');
+        await consumer.stop();
+        process.exit(0);
+    });
 
-process.on('uncaughtException', (error) => {
-    logger.error('Uncaught exception:', error);
-    process.exit(1);
-});
+    process.on('SIGTERM', async () => {
+        logger.info('Received SIGTERM, shutting down gracefully...');
+        await consumer.stop();
+        process.exit(0);
+    });
 
-process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled promise rejection at:', promise, 'reason:', reason);
-    process.exit(1);
-});
+    process.on('uncaughtException', (error) => {
+        logger.error('Uncaught exception:', error);
+        process.exit(1);
+    });
 
-startConsumerWithRetry();
+    process.on('unhandledRejection', (reason, promise) => {
+        logger.error('Unhandled promise rejection at:', promise, 'reason:', reason);
+        process.exit(1);
+    });
 
+    startConsumerWithRetry();
+}
+
+export { consumer, startConsumerWithRetry };
 export default consumer;

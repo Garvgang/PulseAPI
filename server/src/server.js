@@ -15,6 +15,7 @@ import authRouter from "./services/auth/routes/authRouter.js";
 import clientRouter from './services/client/routes/clientRoutes.js';
 import ingestRouter from "./services/ingest/routes/ingestRoutes.js"
 import analyticsRouter from "./services/analytics/routes/analyticsRoutes.js"
+import consumer, { startConsumerWithRetry } from './services/processor/consumer.js';
 
 /**
  * Initialize Express app
@@ -153,6 +154,14 @@ async function startServer() {
             logger.info(`HTTP server successfully listening on port ${config.port}`);
             logger.info(`Environment: ${config.node_env}`);
             logger.info(`API available at: http://localhost:${config.port}`);
+
+            // Start in-process event consumer when standalone worker is not deployed (e.g. Free plan)
+            if (process.env.ENABLE_IN_PROCESS_CONSUMER !== 'false') {
+                logger.info('Starting in-process RabbitMQ event consumer...');
+                startConsumerWithRetry().catch((err) => {
+                    logger.error('Failed to start in-process event consumer:', err);
+                });
+            }
         });
 
 
@@ -163,6 +172,10 @@ async function startServer() {
                 logger.info("HTTP server closed");
 
                 try {
+                    if (consumer && consumer.isRunning) {
+                        await consumer.stop();
+                        logger.info('Event consumer stopped');
+                    }
                     await mongodb.disconnect();
                     await postgres.close();
                     await rabbitmq.close();

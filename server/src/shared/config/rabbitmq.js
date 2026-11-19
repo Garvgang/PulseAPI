@@ -29,8 +29,21 @@ class RabbitMQConnection {
         try {
             this.isConnecting = true;
 
-            logger.info("Connecting to RabbitMQ", config.rabbitmq.url)
-            this.connection = await amqp.connect(config.rabbitmq.url);
+            logger.info("Connecting to RabbitMQ broker...");
+
+            // Ensure compatibility with RabbitMQ 4.x (requires frame_max >= 8192)
+            let brokerUrl = config.rabbitmq.url;
+            try {
+                const parsedUrl = new URL(brokerUrl);
+                if (!parsedUrl.searchParams.has("frameMax")) {
+                    parsedUrl.searchParams.set("frameMax", "8192");
+                    brokerUrl = parsedUrl.toString();
+                }
+            } catch {
+                // Keep brokerUrl as is if non-standard URL format
+            }
+
+            this.connection = await amqp.connect(brokerUrl, { timeout: 10000 });
             this.channel = await this.connection.createChannel();
 
             // Creating key | Queue name
@@ -50,7 +63,7 @@ class RabbitMQConnection {
                 }
             })
 
-            logger.info("RabbitMQ connected, queue:", config.rabbitmq.queue)
+            logger.info(`RabbitMQ connected, queue: ${config.rabbitmq.queue}`);
 
             this.connection.on("close", () => {
                 logger.warn('RabbitMQ connection closed');
